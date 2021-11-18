@@ -1,0 +1,77 @@
+name: Cloudnet deploy
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        type: string
+        required: true
+      hostname:
+        type: string
+        required: true
+      user:
+        type: string
+        required: false
+        default: "deploy"
+      fingerprint:
+        type: string
+        required: true
+      destination:
+        type: string
+        required: true
+    secrets:
+      deploy_key:
+        required: true
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Cache NPM packages
+      id: npm-cache
+      uses: actions/cache@v2
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          #  restore-keys: |
+          #${{ runner.os }}-npm-
+
+    - name: Install Node.js 16
+      id: install-node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+      
+    - name: npm install
+      run: npm install
+
+    - name: Populate environment from .build-env-(target)
+      run: |
+        cat .build-env-${{ inputs.target }} >> $GITHUB_ENV
+
+    - name: npm run build
+      run: |
+        # disable treat warnings as errors 
+        export CI=false
+        npm run build
+
+    - name: Activate ssh-agent with deploy key
+      run: |
+        eval "$( ssh-agent )"
+        ssh-add - <<< "${{ secrets.DEPLOY_KEY }}"
+        printenv|egrep -e SSH_AUTH_SOCK -e SSH_AGENT_PID >> $GITHUB_ENV
+        mkdir ~/.ssh
+        echo "${{ inputs.FINGERPRINT }}" >> ~/.ssh/known_hosts
+
+    - name: rsync the files to Cloudnet
+      run: rsync -av --delete-after --exclude .git ${GITHUB_WORKSPACE}/. ${{ inputs.USER }}@${{ inputs.HOSTNAME }}:${{ inputs.DESTINATION }}/.
+
+    - name: Create symlinks and restart service
+      run: |
+        ssh deploy@${{ inputs.HOSTNAME }} " \
+          ln -s ../../shared/.env ${{ inputs.DESTINATION }} && \
+          sudo systemctl restart nodejs-service || sudo systemctl start nodejs-service"

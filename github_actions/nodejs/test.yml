@@ -1,0 +1,20 @@
+name: Deploy to Cloudnet TEST
+
+on:
+  push:
+    branches: [ test ]
+  pull_request:
+    branches: [ test ]
+  workflow_dispatch:
+    branches: [ test ]
+
+jobs:
+  deploy:
+    uses: "[replace with github account]/[replace with repo name]/.github/workflows/deploy.yml@test"
+    with:
+      hostname: "cXXXX.cloudnet.cloud"
+      target: "test"
+      destination: "/mnt/persist/www/example.com/releases/latest"
+      fingerprint: "cXXXX.cloudnet.cloud ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCb+q3Cpatxy3Dkw3b8th6P5AjsGojXzcW326HkPTWGJBR8F3+CzoTMcQvyhIPeHcsNKFrjQ/niylvHczKFqOOBEa0+b2i53lpw/o4qeq/pt8PdqVMgREOKvCT4slYEflBE1BEReyliHJo0b7rMeO9gCG+SETh0B9+QDlEcS7YJ4Q6i04Sd79qwbU1kUGL/ELje/Cj4KpQGZ3QY+F3jq1iizBLA1LpMuIsQBvTmnflvY9Xm5g5hiVchBaiYQjPyLHH22HrsxpNOD4oI6MZ/etAkn6OV4+OQgDuNi42f11c9E/3byjS1/GyfEAtBIY7H3hqnhGfBppP+FGSAtAzLnmv22aObkecxfs1Hf1LxFX8kZ29Ax8+CbK640MDZF+fkmtERVF3Pog+QbvC0l69/xuhOatNd9Sc8l+Poswv8lrtopQUQnxFmqNgzOplcqqsQ4vnhcA+UYmkRL1J0GCio0DI/Pi7+EnZtnl/kqhvvKLyv07udovaHDAW1mW4brIQOBV0="
+    secrets:
+      deploy_key: ${{ secrets.DEPLOY_KEY }}
