@@ -74,4 +74,4 @@ jobs:
       run: |
         ssh deploy@${{ inputs.HOSTNAME }} " \
           ln -s ../../shared/.env ${{ inputs.DESTINATION }} && \
-          sudo systemctl restart nodejs-service || sudo systemctl start nodejs-service"
+          ( sudo systemctl restart nodejs-service || sudo systemctl start nodejs-service )"
