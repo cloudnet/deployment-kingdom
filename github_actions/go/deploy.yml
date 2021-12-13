@@ -1,0 +1,65 @@
+name: Cloudnet Deploy
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        type: string
+        required: true
+      hostname:
+        type: string
+        required: true
+      user:
+        type: string
+        required: false
+        default: "deploy"
+      fingerprint:
+        type: string
+        required: true
+      destination:
+        type: string
+        required: true
+    secrets:
+      deploy_key:
+        required: true
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '^1.13.8'
+
+    - name: Test
+      run: go test
+
+    - name: Lint
+      run: test -z $(gofmt -l .)
+
+    - name: Build
+      run: go build
+
+    - name: Activate ssh-agent with deploy key
+      run: |
+        eval "$( ssh-agent )"
+        ssh-add - <<< "${{ secrets.DEPLOY_KEY }}"
+        printenv|egrep -e SSH_AUTH_SOCK -e SSH_AGENT_PID >> $GITHUB_ENV
+        mkdir ~/.ssh
+        echo "${{ inputs.FINGERPRINT }}" >> ~/.ssh/known_hosts
+
+    - name: Stop service
+      run: |
+        ssh deploy@${{ inputs.HOSTNAME }} " \
+          sudo systemctl stop exampleservice.service"
+
+    - name: rsync build to Cloudnet
+      run: rsync -av --delete-after --exclude .git --exclude .gitignore --exclude .github --exclude '*.go' --exclude '*.mod' --exclude '*.sum' ${GITHUB_WORKSPACE}/. ${{ inputs.USER }}@${{ inputs.HOSTNAME }}:${{ inputs.DESTINATION }}/.
+
+    - name: Start service
+      run: |
+        ssh deploy@${{ inputs.HOSTNAME }} " \
+          sudo systemctl start exampleservice.service"
