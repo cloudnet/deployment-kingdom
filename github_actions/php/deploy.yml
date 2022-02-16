@@ -54,12 +54,25 @@ jobs:
         mkdir ~/.ssh
         echo "${{ inputs.FINGERPRINT }}" >> ~/.ssh/known_hosts
 
+    - name: Prepare target for deploy
+      run: |
+        ssh ${{ inputs.USER }}@${{ inputs.HOSTNAME }} " \
+          rm -rf ${{ inputs.DESTINATION }}/release.old; \
+          rm -rf ${{ inputs.DESTINATION }}/release.new; \
+          mkdir -p ${{ inputs.DESTINATION }}/release; \
+          mkdir ${{ inputs.DESTINATION }}/release.new"
+
     - name: rsync build to Cloudnet
-      run: rsync -av --delete-after --exclude .git ${GITHUB_WORKSPACE}/. ${{ inputs.USER }}@${{ inputs.HOSTNAME }}:${{ inputs.DESTINATION }}/.
+      run: rsync -av --delete-after --exclude .git ${GITHUB_WORKSPACE}/. ${{ inputs.USER }}@${{ inputs.HOSTNAME }}:${{ inputs.DESTINATION }}/release.new/.
 
     - name: Create symlinks and run DB update
       run: |
         ssh deploy@${{ inputs.HOSTNAME }} " \
-          ln -s ../../shared/.env ${{ inputs.DESTINATION }} && \
-          cd ${{ inputs.DESTINATION }} && \
-          bin/console doctrine:schema:update --force"
+          ln -s ../shared/.env ${{ inputs.DESTINATION }}/release.new && \
+          ( sudo systemctl stop nginx || true ) && \
+          mv ${{ inputs.DESTINATION }}/release ${{ inputs.DESTINATION }}/release.old && \
+          mv ${{ inputs.DESTINATION }}/release.new ${{ inputs.DESTINATION }}/release && \
+          cd ${{ inputs.DESTINATION }}/release && \
+          bin/console doctrine:schema:update --force && \
+          sudo systemctl start nginx"
+
