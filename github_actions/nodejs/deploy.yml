@@ -76,7 +76,7 @@ jobs:
           mkdir ${{ inputs.DESTINATION }}/release.new"
 
     - name: rsync the files to Cloudnet
-      run: rsync -av --delete-after --exclude .git ${GITHUB_WORKSPACE}/. ${{ inputs.USER }}@${{ inputs.HOSTNAME }}:${{ inputs.DESTINATION }}/.
+      run: rsync -av --delete-after --exclude .git ${GITHUB_WORKSPACE}/. ${{ inputs.USER }}@${{ inputs.HOSTNAME }}:${{ inputs.DESTINATION }}/release.new/.
 
     - name: Create symlinks and switch folders
       run: |

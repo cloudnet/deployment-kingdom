@@ -16,7 +16,7 @@ jobs:
     with:
       hostname: "cXXXX.cloudnet.cloud"
       target: "production"
-      destination: "/mnt/persist/www/example.com/releases/latest"
+      destination: "/mnt/persist/www/example.com"
       fingerprint: "cXXXX.cloudnet.cloud ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC8J6tpAyDTRM/yx1MwSYYitftNSLfmwT1+sbPtTGD/etUJF6l8CidUVY79CS/5i355witp4bZvDZcPoYYenz2lQBfHr2JnH0sd3z5tCPL5RQaQxeg2SQ1zOW1V5T+POxY3FmmSWFFa7JmOk1ZCPccnKKRdQEt1haO663q+xszdnDpzcsYlwoIPrE7HKzALQNi47WqKyrGk7JmyF8ih2bU+GoDEziyCUqq9zWKv4bduTWZ/9saJh99r4ETFjMMTUXtsBuqwWBMAP835u3Hk+U+QFWKOE4rbkg/n8vGpUCS2GjkTTPECYo10MlRQVfv0/eHLo6Pe5Tfy2auPDOIICTdO3eziqQsftKxjni1yfrXwucI1r4WYl3XZpTFJndTDnyoqBPi2kO8I9JAbXOVCHsDeg035hVCi36aU2DLjQ3oJ3thN/An1sr6E3d8u1/xMj3JG6q/lu+4ZpfEEHjBYa9oRgQ5CS1oN8+ivGxifKrN6rzeC8pdvrEpg1pFQ7o+N5Zs="
     secrets:
       deploy_key: ${{ secrets.DEPLOY_KEY }}
