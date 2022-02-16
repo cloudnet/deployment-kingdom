@@ -67,11 +67,22 @@ jobs:
         mkdir ~/.ssh
         echo "${{ inputs.FINGERPRINT }}" >> ~/.ssh/known_hosts
 
+    - name: Prepare target for deploy
+      run: |
+        ssh ${{ inputs.USER }}@${{ inputs.HOSTNAME }} " \
+          rm -rf ${{ inputs.DESTINATION }}/release.old; \
+          rm -rf ${{ inputs.DESTINATION }}/release.new; \
+          mkdir -p ${{ inputs.DESTINATION }}/release; \
+          mkdir ${{ inputs.DESTINATION }}/release.new"
+
     - name: rsync the files to Cloudnet
       run: rsync -av --delete-after --exclude .git ${GITHUB_WORKSPACE}/. ${{ inputs.USER }}@${{ inputs.HOSTNAME }}:${{ inputs.DESTINATION }}/.
 
-    - name: Create symlinks and restart service
+    - name: Create symlinks and switch folders
       run: |
-        ssh deploy@${{ inputs.HOSTNAME }} " \
-          ln -s ../../shared/.env ${{ inputs.DESTINATION }} && \
-          ( sudo systemctl restart nodejs-service || sudo systemctl start nodejs-service )"
+        ssh ${{ inputs.USER }}@${{ inputs.HOSTNAME }} " \
+          ln -s ../shared/.env ${{ inputs.DESTINATION }}/release.new && \
+          ( sudo systemctl stop nodejs-service || true ) && \
+          mv ${{ inputs.DESTINATION }}/release ${{ inputs.DESTINATION }}/release.old && \
+          mv ${{ inputs.DESTINATION }}/release.new ${{ inputs.DESTINATION }}/release && \
+          sudo systemctl start nodejs-service"
