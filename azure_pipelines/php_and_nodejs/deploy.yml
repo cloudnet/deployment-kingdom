@@ -1,0 +1,77 @@
+# Add steps that run tests, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/php
+
+# RELEASES TO STAGE ARE AUTOMATICALLY CHECKED OUT ON EVERY COMMIT
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-20.04
+
+variables:
+  phpVersion: 7.4
+  serverUrl: cXXXX.cloudnet.cloud
+  installPath: /mnt/persist/www/example.com
+
+steps:
+
+# run ssh-keyscan <server domain> to list
+- task: InstallSSHKey@0
+  inputs:
+    knownHostsEntry: |
+      # cXXXX.cloudnet.cloud:22 SSH-2.0-OpenSSH_8.2p1
+      cXXXX.cloudnet.cloud ssh-rsa XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX=
+      # cXXXX.cloudnet.cloud:22 SSH-2.0-OpenSSH_8.2p1
+      cXXXX.cloudnet.cloud ecdsa-sha2-nistp256 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX=
+      # cXXXX.cloudnet.cloud:22 SSH-2.0-OpenSSH_8.2p1
+      cXXXX.cloudnet.cloud ssh-ed25519 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX+/
+    sshKeySecureFile: 'cloudnet.private'
+
+- script: |
+    sudo update-alternatives --set php /usr/bin/php$(phpVersion)
+    sudo update-alternatives --set phar /usr/bin/phar$(phpVersion)
+    sudo update-alternatives --set phpdbg /usr/bin/phpdbg$(phpVersion)
+    sudo update-alternatives --set php-cgi /usr/bin/php-cgi$(phpVersion)
+    sudo update-alternatives --set phar.phar /usr/bin/phar.phar$(phpVersion)
+    php -version
+  displayName: 'use PHP version $(phpVersion)'
+
+- script: composer install --no-interaction --prefer-dist --working-dir='$(Build.SourcesDirectory)'
+  displayName: 'composer install'
+
+- task: NodeTool@0
+  inputs:
+    versionSpec: '16.x'
+  displayName: 'node.js install'
+
+- script: |
+    cd $(Build.SourcesDirectory)
+    npm install
+  displayName: 'npm install'
+
+- script: |
+    cd $(Build.SourcesDirectory)
+    npm build
+  displayName: 'npm build'
+
+- script: |
+    ssh deploy@$(serverUrl) " \
+    rm -rf $(installPath)/release.old; \
+    rm -rf $(installPath)/release.new; \
+    mkdir -p $(installPath)/release; \
+    mkdir $(installPath)/release.new"
+  displayName: 'Prepare target for deploy'
+
+- script: |
+    rsync -av --delete-after --exclude .git $(Build.SourcesDirectory)/. deploy@$(serverUrl):$(installPath)/release.new/.
+  displayName: 'sync files'
+
+
+- script: |
+    ssh deploy@$(serverUrl) " \
+    ln -s ../shared/.env $(installPath)/release.new/.env && \
+    ( sudo systemctl stop nginx || true ) && \
+    mv $(installPath)/release $(installPath)/release.old && \
+    mv $(installPath)/release.new $(installPath)/release && \
+    ( sudo systemctl start nginx || true )"
+  displayName: 'Create symlinks and activate new release'
