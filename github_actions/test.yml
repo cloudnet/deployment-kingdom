@@ -5,8 +5,6 @@ on:
     branches: [ test ]
   pull_request:
     branches: [ test ]
-  workflow_dispatch:
-    branches: [ test ]
 
 jobs:
   deploy:
